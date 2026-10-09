@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rock Paper Scissors | Arcade</title>
+<meta name="description" content="A 2D arcade-style Rock Paper Scissors game: play the computer in Classic or First to 5 mode.">
+<style>
+/* ---------- Theme tokens ---------- */
+:root{--blue:#1677FF;--red:#FF3030;--bg:#071426;--panel:#0d2038;--white:#fff;--mute:#a9bbd6;--gold:#ffd84d;--r:20px}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh;color:var(--white);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.4;overflow-x:hidden;
+ background:radial-gradient(circle at 12% 15%,rgba(22,119,255,.35),transparent 45%),radial-gradient(circle at 88% 85%,rgba(255,48,48,.3),transparent 45%),var(--bg)}
+body::before{content:"";position:fixed;inset:0;background:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px) 0 0/100% 4px;pointer-events:none}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+[hidden]{display:none!important}
+.wrap{width:min(860px,100%);margin:0 auto;padding:1rem;min-height:100vh;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1}
+.glow-b{color:#7db6ff;text-shadow:0 0 14px var(--blue)}.glow-r{color:#ff8a8a;text-shadow:0 0 14px var(--red)}
+/* ---------- Buttons ---------- */
+.btn{border:2px solid var(--blue);background:linear-gradient(180deg,#2a86ff,var(--blue));padding:.9rem 1.8rem;border-radius:16px;font-weight:900;letter-spacing:.1em;box-shadow:0 6px 0 #0b4db3,0 0 24px rgba(22,119,255,.55);transition:.15s}
+.btn:hover{transform:translateY(-3px);box-shadow:0 9px 0 #0b4db3,0 0 34px rgba(22,119,255,.85)}
+.btn:active{transform:translateY(4px);box-shadow:0 2px 0 #0b4db3}
+.btn.red{border-color:var(--red);background:linear-gradient(180deg,#ff5656,var(--red));box-shadow:0 6px 0 #a81414,0 0 24px rgba(255,48,48,.55)}
+.btn.red:hover{box-shadow:0 9px 0 #a81414,0 0 34px rgba(255,48,48,.85)}
+.btn.ghost{background:transparent;box-shadow:none;border-color:#4a6a96;font-size:.85rem;padding:.55rem 1rem;letter-spacing:.06em}
+.btn.ghost:hover{border-color:var(--white);box-shadow:0 0 16px rgba(255,255,255,.3)}
+.btn.big{font-size:1.5rem;padding:1.1rem 3rem}
+/* ---------- Menu ---------- */
+#menu{text-align:center}
+.title{font-size:clamp(2.4rem,9vw,5rem);font-weight:900;font-style:italic;line-height:1;letter-spacing:.02em;text-transform:uppercase}
+.title span:first-child{color:#6fb0ff;text-shadow:0 0 22px var(--blue),0 4px 0 #0b3b8a}.title span:last-child{color:#ff7b7b;text-shadow:0 0 22px var(--red),0 4px 0 #8a1010}
+.sub{color:var(--mute);font-size:clamp(1rem,3vw,1.35rem);margin:1rem 0 2rem}
+.hero-icons{display:flex;justify-content:center;gap:clamp(.8rem,4vw,2rem);margin:1.5rem 0 2.2rem}
+.hero-icons span{font-size:clamp(3rem,13vw,5.5rem);animation:bob 2.2s ease-in-out infinite;filter:drop-shadow(0 0 18px var(--blue))}
+.hero-icons span:nth-child(2){animation-delay:-.7s;filter:drop-shadow(0 0 18px #fff)}.hero-icons span:nth-child(3){animation-delay:-1.4s;filter:drop-shadow(0 0 18px var(--red))}
+@keyframes bob{50%{transform:translateY(-16px) rotate(-8deg)}}
+.stack{display:grid;gap:1rem;justify-items:center}
+/* ---------- Game ---------- */
+.bar{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.modes{display:flex;border:2px solid #4a6a96;border-radius:14px;overflow:hidden}
+.modes button{background:transparent;border:0;padding:.55rem 1rem;font-weight:800;font-size:.85rem;letter-spacing:.05em}
+.modes button[aria-pressed=true]{background:var(--blue);box-shadow:0 0 18px var(--blue) inset}
+.tools{display:flex;gap:.5rem}
+.score{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.sc{background:var(--panel);border:2px solid #29456e;border-radius:16px;padding:.6rem .3rem;text-align:center;font-size:.75rem;font-weight:700;letter-spacing:.06em;color:var(--mute);text-transform:uppercase;transition:.3s}
+.sc b{display:block;font-size:clamp(1.6rem,6vw,2.4rem);color:var(--white);line-height:1.1}
+.sc.p{border-color:var(--blue);box-shadow:0 0 18px rgba(22,119,255,.4)}.sc.p b{color:#7db6ff}
+.sc.c{border-color:var(--red);box-shadow:0 0 18px rgba(255,48,48,.4)}.sc.c b{color:#ff8a8a}
+.sc.pop{transform:scale(1.08)}
+.goal{text-align:center;color:var(--gold);font-weight:800;letter-spacing:.06em;min-height:1.4em;margin-bottom:.6rem}
+.arena{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.6rem}
+.fighter{background:var(--panel);border:3px solid;border-radius:var(--r);padding:1rem .5rem;text-align:center;transition:.3s}
+.fighter.p{border-color:var(--blue);box-shadow:0 0 28px rgba(22,119,255,.5)}.fighter.c{border-color:var(--red);box-shadow:0 0 28px rgba(255,48,48,.5)}
+.fighter small{display:block;font-weight:800;letter-spacing:.12em;margin-bottom:.3rem}
+.hand{font-size:clamp(3.5rem,16vw,6.5rem);line-height:1.15;display:block;min-height:1.2em}
+.hand.shake{animation:fist .35s ease-in-out infinite}
+.hand.pop{animation:pop .5s cubic-bezier(.2,2,.4,1)}
+@keyframes fist{50%{transform:translateY(-14px) rotate(12deg)}}
+@keyframes pop{from{transform:scale(.3) rotate(-30deg);opacity:0}}
+.fighter.p.win{box-shadow:0 0 50px var(--blue),0 0 0 4px rgba(22,119,255,.4);transform:scale(1.04)}
+.fighter.c.win{box-shadow:0 0 50px var(--red),0 0 0 4px rgba(255,48,48,.4);transform:scale(1.04)}
+.fighter.dim{opacity:.55}
+.vs{font-weight:900;font-size:clamp(1.2rem,5vw,2rem);font-style:italic;color:var(--gold);text-shadow:0 0 14px var(--gold)}
+.result{text-align:center;font-size:clamp(1.8rem,7vw,3rem);font-weight:900;font-style:italic;margin:1rem 0 .4rem;min-height:1.2em;letter-spacing:.04em}
+.result.win{color:#6fb0ff;text-shadow:0 0 22px var(--blue)}.result.lose{color:#ff7b7b;text-shadow:0 0 22px var(--red)}.result.draw{color:var(--gold);text-shadow:0 0 22px var(--gold)}
+.moves{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem;margin-top:.6rem}
+.move{background:linear-gradient(180deg,#12305a,#0d2038);border:3px solid var(--blue);border-radius:var(--r);padding:.8rem .3rem;font-weight:900;letter-spacing:.08em;font-size:clamp(.75rem,3vw,1rem);box-shadow:0 6px 0 #0a2a57,0 0 20px rgba(22,119,255,.4);transition:.15s;display:grid;gap:.2rem;justify-items:center;min-height:96px}
+.move i{font-style:normal;font-size:clamp(2.2rem,10vw,3.4rem);line-height:1.1;transition:.2s}
+.move:hover:not(:disabled){transform:translateY(-5px);box-shadow:0 10px 0 #0a2a57,0 0 34px rgba(22,119,255,.85)}
+.move:hover:not(:disabled) i{transform:scale(1.2) rotate(-8deg)}
+.move:active:not(:disabled){transform:translateY(3px)}
+.move:disabled{opacity:.45;cursor:not-allowed}
+.move.chosen{border-color:var(--gold);animation:pulse .5s}
+@keyframes pulse{50%{transform:scale(1.08)}}
+.hint{text-align:center;color:var(--mute);font-size:.8rem;margin-top:.8rem}
+/* screen shake when a round ends */
+.shake-screen{animation:shk .45s}
+@keyframes shk{20%{transform:translate(-7px,3px)}40%{transform:translate(6px,-4px)}60%{transform:translate(-4px,-2px)}80%{transform:translate(3px,2px)}}
+/* ---------- Dialogs / overlay ---------- */
+dialog{margin:auto;width:min(520px,92vw);background:var(--panel);color:var(--white);border:3px solid var(--blue);border-radius:var(--r);padding:1.5rem;box-shadow:0 0 50px rgba(22,119,255,.6)}
+dialog::backdrop{background:rgba(3,10,20,.8)}
+dialog h2{margin-bottom:.8rem}dialog ul{padding-left:1.2rem;color:var(--mute)}dialog li{margin:.45rem 0}dialog b{color:var(--white)}
+.end{position:fixed;inset:0;z-index:20;background:rgba(3,10,20,.88);display:grid;place-items:center;padding:1rem;animation:fade .3s}
+@keyframes fade{from{opacity:0}}
+.endcard{text-align:center;background:var(--panel);border:4px solid;border-radius:26px;padding:2rem 1.5rem;width:min(460px,100%);animation:pop .5s}
+.endcard.v{border-color:var(--blue);box-shadow:0 0 70px var(--blue)}.endcard.d{border-color:var(--red);box-shadow:0 0 70px var(--red)}
+.endcard h2{font-size:clamp(2.2rem,10vw,3.4rem);font-style:italic;font-weight:900}.endcard .em{font-size:4rem}
+.endcard p{color:var(--mute);margin:.6rem 0 1.4rem}.endcard .row{display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap}
+.cf{position:fixed;top:-20px;width:10px;height:16px;z-index:30;pointer-events:none;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+@media(max-width:520px){.arena{grid-template-columns:1fr 1fr}.vs{grid-column:1/-1;order:-1;text-align:center;display:none}.score{grid-template-columns:repeat(2,1fr)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ MAIN MENU ============ -->
+  <section id="menu" aria-labelledby="mt">
+    <h1 class="title" id="mt"><span>Rock Paper</span> <span>Scissors</span></h1>
+    <p class="sub">Choose Your Move. Beat the Computer!</p>
+    <div class="hero-icons" aria-hidden="true"><span>🪨</span><span>📄</span><span>✂️</span></div>
+    <div class="stack">
+      <button class="btn big" id="playBtn">PLAY GAME</button>
+      <button class="btn red" id="howBtn">HOW TO PLAY</button>
+    </div>
+  </section>
+
+  <!-- ============ GAME SCREEN ============ -->
+  <section id="game" hidden aria-label="Game">
+    <div class="bar">
+      <button class="btn ghost" id="menuBtn" aria-label="Back to main menu">← MENU</button>
+      <div class="modes" role="group" aria-label="Game mode">
+        <button id="mClassic" aria-pressed="true">CLASSIC</button>
+        <button id="mFirst" aria-pressed="false">FIRST TO 5</button>
+      </div>
+      <div class="tools">
+        <button class="btn ghost" id="soundBtn" aria-pressed="true" aria-label="Sound on">🔊</button>
+        <button class="btn ghost" id="resetBtn" aria-label="Reset scores and rounds">↺ RESET</button>
+      </div>
+    </div>
+
+    <div class="score" aria-label="Scoreboard">
+      <div class="sc p">Player Wins<b id="sW">0</b></div>
+      <div class="sc c">Computer Wins<b id="sL">0</b></div>
+      <div class="sc">Draws<b id="sD">0</b></div>
+      <div class="sc">Total Rounds<b id="sR">0</b></div>
+    </div>
+    <p class="goal" id="goal"></p>
+
+    <div class="arena" id="arena">
+      <div class="fighter p" id="fp"><small class="glow-b">YOU</small><span class="hand" id="hp" aria-hidden="true">❔</span></div>
+      <div class="vs" aria-hidden="true">VS</div>
+      <div class="fighter c" id="fc"><small class="glow-r">COMPUTER</small><span class="hand" id="hc" aria-hidden="true">❔</span></div>
+    </div>
+    <p class="result" id="result" role="status" aria-live="assertive">PICK YOUR MOVE!</p>
+
+    <div class="moves" role="group" aria-label="Choose your move">
+      <button class="move" data-move="rock" aria-label="Rock"><i>🪨</i>ROCK</button>
+      <button class="move" data-move="paper" aria-label="Paper"><i>📄</i>PAPER</button>
+      <button class="move" data-move="scissors" aria-label="Scissors"><i>✂️</i>SCISSORS</button>
+    </div>
+    <p class="hint">Keyboard: R = Rock · P = Paper · S = Scissors</p>
+  </section>
+</div>
+
+<!-- ============ HOW TO PLAY ============ -->
+<dialog id="how" aria-labelledby="ht">
+  <h2 id="ht" class="glow-b">HOW TO PLAY</h2>
+  <ul>
+    <li>Tap <b>Rock</b>, <b>Paper</b> or <b>Scissors</b>. The computer picks at random.</li>
+    <li><b>Rock</b> beats Scissors · <b>Scissors</b> beats Paper · <b>Paper</b> beats Rock.</li>
+    <li>Same move = a <b>draw</b>.</li>
+    <li><b>Classic:</b> play as many rounds as you like.</li>
+    <li><b>First to 5:</b> the first to win 5 rounds wins the match.</li>
+    <li>Use 🔊 to switch sounds on or off and ↺ RESET to start over.</li>
+  </ul>
+  <p style="text-align:center;margin-top:1.2rem"><button class="btn" id="closeHow">GOT IT!</button></p>
+</dialog>
+
+<!-- ============ MATCH END OVERLAY ============ -->
+<div class="end" id="end" hidden role="alertdialog" aria-labelledby="endT">
+  <div class="endcard" id="endCard">
+    <div class="em" id="endEm" aria-hidden="true"></div>
+    <h2 id="endT"></h2><p id="endP"></p>
+    <div class="row"><button class="btn" id="againBtn">PLAY AGAIN</button><button class="btn ghost" id="endMenu">MENU</button></div>
+  </div>
+</div>
+
+<script>
+/* =====================================================
+   1. GAME ENGINE (rules + scoring, no DOM code)
+   ===================================================== */
+const MOVES = ["rock", "paper", "scissors"];
+const ICON  = { rock: "🪨", paper: "📄", scissors: "✂️" };
+const WIN_TARGET = 5;
+// Each move beats exactly one other move.
+const BEATS = { rock: "scissors", scissors: "paper", paper: "rock" };
+const randomMove = () => MOVES[Math.floor(Math.random() * MOVES.length)];
+
+// Returns "win", "lose" or "draw" from the PLAYER's point of view.
+function decide(player, computer) {
+  if (player === computer) return "draw";
+  return BEATS[player] === computer ? "win" : "lose";
+}
+
+const Game = {
+  mode: "classic", w: 0, l: 0, d: 0, rounds: 0,
+  busy: false,   // true while a round is animating (blocks double clicks / double counting)
+  over: false,   // true once someone reaches 5 in First to 5 mode
+  token: 0,      // changes on reset so old animation timers can be ignored
+  reset() { this.w = this.l = this.d = this.rounds = 0; this.busy = this.over = false; this.token++; },
+  setMode(m) { this.mode = m; this.reset(); },
+  // Play one round. Returns null if a round is already running or the match is over.
+  play(player, computer = randomMove()) {
+    if (this.busy || this.over) return null;
+    this.busy = true;
+    const r = decide(player, computer);
+    this.rounds++;
+    if (r === "win") this.w++; else if (r === "lose") this.l++; else this.d++;
+    if (this.mode === "first5" && (this.w >= WIN_TARGET || this.l >= WIN_TARGET)) this.over = true;
+    return { player, computer, r, over: this.over, winner: this.over ? (this.w >= WIN_TARGET ? "player" : "computer") : null, token: this.token };
+  },
+  release() { this.busy = false; }
+};
+
+/* ---- UI ---- */
+const $ = id => document.getElementById(id);
+const moveBtns = [...document.querySelectorAll(".move")];
+
+/* ---------- Sound (Web Audio, no files needed) ---------- */
+let soundOn = true, actx = null;
+function tone(freq, start, dur, type = "square", vol = 0.06) {
+  if (!soundOn) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + start;
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur);
+  } catch (e) { /* audio not available: ignore */ }
+}
+const sfx = {
+  select: () => tone(520, 0, .09),
+  win:  () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .09, .16, "triangle", .09)),
+  lose: () => [392, 330, 262, 196].forEach((f, i) => tone(f, i * .12, .2, "sawtooth", .06)),
+  draw: () => { tone(440, 0, .15, "triangle"); tone(440, .18, .15, "triangle"); }
+};
+$("soundBtn").addEventListener("click", () => {
+  soundOn = !soundOn;
+  $("soundBtn").textContent = soundOn ? "🔊" : "🔇";
+  $("soundBtn").setAttribute("aria-pressed", soundOn);
+  $("soundBtn").setAttribute("aria-label", soundOn ? "Sound on" : "Sound off");
+  sfx.select();
+});
+
+/* ---------- Screens & dialogs ---------- */
+function showScreen(name) { $("menu").hidden = name !== "menu"; $("game").hidden = name !== "game"; }
+$("playBtn").addEventListener("click", () => { showScreen("game"); sfx.select(); });
+$("menuBtn").addEventListener("click", () => showScreen("menu"));
+$("howBtn").addEventListener("click", () => $("how").showModal());
+$("closeHow").addEventListener("click", () => $("how").close());
+$("how").addEventListener("click", e => { if (e.target === $("how")) $("how").close(); }); // click backdrop to close
+
+/* ---------- Scoreboard ---------- */
+function bump(el) { el.parentElement.classList.add("pop"); setTimeout(() => el.parentElement.classList.remove("pop"), 250); }
+function renderScore(animate) {
+  const set = (id, v) => { const el = $(id); if (el.textContent != v) { el.textContent = v; if (animate) bump(el); } };
+  set("sW", Game.w); set("sL", Game.l); set("sD", Game.d); set("sR", Game.rounds);
+  $("goal").textContent = Game.mode === "first5" ? `FIRST TO ${WIN_TARGET} WINS · YOU ${Game.w} – ${Game.l} CPU` : "";
+}
+function setMoves(enabled) { moveBtns.forEach(b => { b.disabled = !enabled; b.classList.remove("chosen"); }); }
+
+// Put the arena back to its starting state
+function resetArena() {
+  $("hp").textContent = $("hc").textContent = "❔";
+  $("hp").className = $("hc").className = "hand";
+  $("fp").className = "fighter p"; $("fc").className = "fighter c";
+  $("result").textContent = "PICK YOUR MOVE!"; $("result").className = "result";
+}
+function fullReset() { Game.reset(); resetArena(); renderScore(false); setMoves(true); $("end").hidden = true; }
+
+/* ---------- Playing a round ---------- */
+function pick(move) {
+  const res = Game.play(move);               // engine decides the result immediately
+  if (!res) return;                          // ignored: round running or match over
+  setMoves(false);                           // disable buttons while the animation plays
+  moveBtns.find(b => b.dataset.move === move).classList.add("chosen");
+  sfx.select();
+  resetArena();
+  $("result").textContent = "ROCK… PAPER… SCISSORS…";
+  $("hp").className = $("hc").className = "hand shake"; $("hp").textContent = $("hc").textContent = "✊";
+  const alive = () => res.token === Game.token;   // false if the player pressed RESET meanwhile
+
+  // Step 1: after the shake, reveal both choices
+  setTimeout(() => {
+    if (!alive()) return;
+    $("hp").textContent = ICON[res.player]; $("hc").textContent = ICON[res.computer];
+    $("hp").className = $("hc").className = "hand pop";
+    const texts = { win: "YOU WIN!", lose: "YOU LOSE!", draw: "IT'S A DRAW!" };
+    $("result").textContent = texts[res.r]; $("result").className = "result " + res.r;
+    if (res.r === "win") { $("fp").classList.add("win"); $("fc").classList.add("dim"); }
+    if (res.r === "lose") { $("fc").classList.add("win"); $("fp").classList.add("dim"); }
+    renderScore(true);                           // scoreboard updates once per round
+    sfx[res.r]();
+    const g = $("game"); g.classList.remove("shake-screen"); void g.offsetWidth; g.classList.add("shake-screen");
+  }, 750);
+
+  // Step 2: unlock the buttons (or end the match)
+  setTimeout(() => {
+    if (!alive()) return;
+    Game.release();
+    if (res.over) endMatch(res.winner); else setMoves(true);
+  }, 1500);
+}
+moveBtns.forEach(b => b.addEventListener("click", () => pick(b.dataset.move)));
+document.addEventListener("keydown", e => {
+  if ($("game").hidden || $("how").open || !$("end").hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+  const m = { r: "rock", p: "paper", s: "scissors" }[e.key.toLowerCase()];
+  if (m) pick(m);
+});
+
+/* ---------- Modes & reset ---------- */
+function switchMode(m) {
+  if (Game.mode === m) return;
+  Game.setMode(m);                               // switching mode restarts scores
+  $("mClassic").setAttribute("aria-pressed", m === "classic");
+  $("mFirst").setAttribute("aria-pressed", m === "first5");
+  fullReset();
+}
+$("mClassic").addEventListener("click", () => switchMode("classic"));
+$("mFirst").addEventListener("click", () => switchMode("first5"));
+$("resetBtn").addEventListener("click", () => { fullReset(); sfx.select(); });
+
+/* ---------- Victory / defeat screen ---------- */
+function endMatch(winner) {
+  const won = winner === "player";
+  $("endCard").className = "endcard " + (won ? "v" : "d");
+  $("endEm").textContent = won ? "🏆" : "💥";
+  $("endT").textContent = won ? "VICTORY!" : "DEFEAT!";
+  $("endT").className = won ? "glow-b" : "glow-r";
+  $("endP").textContent = `Final score: You ${Game.w} – ${Game.l} Computer · ${Game.rounds} rounds`;
+  $("end").hidden = false; $("againBtn").focus();
+  if (won) { confetti(); tone(784, 0, .3, "triangle", .1); tone(1047, .25, .5, "triangle", .1); }
+}
+$("againBtn").addEventListener("click", fullReset);
+$("endMenu").addEventListener("click", () => { fullReset(); showScreen("menu"); });
+function confetti() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const cols = ["#1677FF", "#FF3030", "#fff", "#ffd84d"];
+  for (let i = 0; i < 80; i++) {
+    const c = document.createElement("div"); c.className = "cf"; c.setAttribute("aria-hidden", "true");
+    c.style.left = Math.random() * 100 + "vw"; c.style.background = cols[i % 4];
+    c.style.animationDuration = 2.2 + Math.random() * 2.5 + "s"; c.style.animationDelay = Math.random() * .7 + "s";
+    document.body.append(c); setTimeout(() => c.remove(), 6000);
+  }
+}
+renderScore(false);
+</script>
+</body>
+</html>
